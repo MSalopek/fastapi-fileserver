@@ -33,20 +33,15 @@ def can_rename(from_name: str, to_name: str) -> bool:
 
 def rename(base: str, from_name: str, to_name: str) -> bool:
     """
-    Perform file rename under rules enforced by can_rename and validate_filename.
-    If the rename operation fails, return False.
+    Perform file rename. If the rename operation fails, return False.
     """
-    if not can_rename(from_name, to_name):
-        return False
-
-    if not validate_filename(to_name.split("/")[-1]):
-        return False
-
     try:
         os.rename(
             os.path.join(base, from_name),
             os.path.join(base, to_name),
         )
+        return True
+    # avoid leaking this error to the user, regardles of the reason
     except:
         return False
 

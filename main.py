@@ -1,14 +1,16 @@
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
-from file_browser import search_files, rename, zip_files, exists
+from file_browser import can_rename, search_files, rename, validate_filename, zip_files, exists
 
 from model import RenameRequest, SearchResponse
+
 
 # could be made configurable
 __DEFAULT_DATA_DIR = "./data/"
 
-app = FastAPI()
+
+app = FastAPI(title="Demo File Server")
 
 
 @app.get("/search/{pathname}", response_model=SearchResponse)
@@ -24,22 +26,13 @@ async def search(pathname: str) -> SearchResponse:
     }
 
 
-@app.post("/rename")
-async def rename(rename_in: RenameRequest):
-    """
-    Rename a file. The file must be under the same directory as the original file.
-    * move operations using rename are not allowed
-    * in case of invalid pathname or rename operation failure, return 400
-    """
-    success = rename(__DEFAULT_DATA_DIR, rename_in.from_name, rename_in.to_name)
-    if not success:
-        raise HTTPException(status_code=400, detail="File could not be renamed")
-
 @app.get("/download")
 async def download(q: str):
     """
     Download one or multiple files specified by the "q" string.
-    "q" is parsed into string to a list of paths. The paths are relative to the base directory.
+    "q" is parsed from a comma separated list of strings into a list of file paths.
+    
+    The paths are relative to the base directory.
     * if multiple files are requested -> download as zip called files.zip (as StreamingResponse)
     * if single file is requested -> download the file (as FileResponse)
     * in case of download operation failure, return 500
@@ -70,3 +63,23 @@ async def download(q: str):
         )
     except Exception as e:
         return HTTPException(status_code=500, detail="File(s) could not be downloaded %s" % e)
+
+
+
+@app.put("/rename")
+async def rename_file(rename_in: RenameRequest):
+    """
+    Rename a file. The file must be under the same directory as the original file.
+    * move operations using rename are not allowed
+    * in case of invalid pathname or rename operation failure, return 400
+    """
+    if not can_rename(rename_in.from_name, rename_in.to_name):
+        raise HTTPException(status_code=400, detail="Files must be under same directory")
+
+    if not validate_filename(rename_in.to_name.split("/")[-1]):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    success = rename(__DEFAULT_DATA_DIR, rename_in.from_name, rename_in.to_name)
+    if not success:
+        # raise generic 500 and avoid leaking the error info to the user
+        raise HTTPException(status_code=500, detail="File could not be renamed")
