@@ -1,5 +1,7 @@
 # FastAPI file server
-This is a demo app showcasing a simple file server written in FastAPI
+This is a demo app showcasing a simple file server written in FastAPI.
+
+**Uses Python 3.10+**
 
 ## Installing
 First, install all dependencies (using `pip`).
@@ -52,6 +54,7 @@ curl -X 'GET' \
 Use comma separated list of strings to download files:
 * If a single file is requested it will be returned.
 * If multiple files are requested they will be zipped and then returned
+* **you must provide a full path because** eg `folder_one/data/some_image.png`
 
 ```shell
 # returns a zip file (check ./data/)
